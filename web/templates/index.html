@@ -1,0 +1,47 @@
+<html>
+<head>
+    <title>Sample app</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+    <h1>for router</h1>
+    <form method="POST" action="/add">
+    <input name="ip" placeholder="ip" required />
+    <input name="username" placeholder="username" required />
+    <input name="password" placeholder="password" required />
+    <button type="submit">Add Comment</button>
+  </form>
+
+
+      <h1>for switch</h1>
+    <form method="POST" action="/adds">
+    <input name="ip" placeholder="ip" required />
+    <input name="username" placeholder="username" required />
+    <input name="password" placeholder="password" required />
+    <button type="submit">Add Comment</button>
+  </form>
+  <h1>Router</h1>
+  <ul>
+    {% for router in data %}
+      <li>
+	        <a href="/router/{{ router.ip }}" style="margin-left:8px;">{{ router.ip }}</a> - {{ router.username }}
+         <form action="/delete/{{ router._id }}" method="POST" style="display:inline;">
+          <button type="submit">Delete</button>
+         </form>
+      </li>
+    {% endfor %}
+  </ul>
+    <h1>Switch</h1>
+    <ul>
+    {% for switch in sdata %}
+      <li>
+	        <a href="/switch/{{ switch.ip }}" style="margin-left:8px;">{{ switch.ip }}</a> - {{ switch.username }}
+         <form action="/delete/{{ switch._id }}" method="POST" style="display:inline;">
+          <button type="submit">Delete</button>
+         </form>
+      </li>
+    {% endfor %}
+  </ul>
+
+</body>
+</html>
