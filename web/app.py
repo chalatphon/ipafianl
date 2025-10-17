@@ -63,8 +63,8 @@ def delete_switch(id):
     
 @app.route("/router/<string:ip>")
 def router_detail(ip):
-    router_data = mycol.find_one({"host": ip})
-    return render_template("router.html", router_ip = ip)
+    docs = mydb.route_table.find({"router_ip": ip}).sort("timestamp", -1).limit(1)
+    return render_template("router.html", router_ip = ip,routing = docs)
 
 
 if __name__ == "__main__":

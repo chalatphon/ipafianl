@@ -4,4 +4,20 @@
     <link rel="stylesheet" href="/static/style.css" />
 </head>
     <h1>Router: {{ router_ip }}</h1>
+    <table border ="1">
+    <tr>
+      <th>Protocal</th>
+      <th>network</th>
+      <th>nexthop</th>
+    </tr>
+    {% for doc in routing %}
+      {% for info in doc.route %}
+      <tr>
+        <td>{{ info.protocol }}</td>
+        <td>{{ info.network }}/{{ info.prefix_length }}</td>
+        <td>{{ info.nexthop_if }}</td>
+      </tr>
+      {% endfor %}
+    {% endfor %}
+  </table>
 </html>
