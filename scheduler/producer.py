@@ -2,8 +2,7 @@ import os
 import pika
 
 
-def produce(host, body):
-
+def produce_router(host, body):
     rabbitmq_user = os.getenv("RABBITMQ_DEFAULT_USER")
     rabbitmq_pass = os.getenv("RABBITMQ_DEFAULT_PASS")
 
@@ -21,6 +20,25 @@ def produce(host, body):
     channel.basic_publish(exchange="jobs", routing_key="check_interfaces", body=body)
 
     connection.close()
+def produce_switch(host, body):
+    rabbitmq_user = os.getenv("RABBITMQ_DEFAULT_USER")
+    rabbitmq_pass = os.getenv("RABBITMQ_DEFAULT_PASS")
+
+    credentials = pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)
+    parameters = pika.ConnectionParameters(host, credentials=credentials)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+
+    channel.exchange_declare(exchange="jobs", exchange_type="direct")
+    channel.queue_declare(queue="switch_jobs")
+    channel.queue_bind(
+        queue="switch_jobs", exchange="jobs", routing_key="check_switch"
+    )
+
+    channel.basic_publish(exchange="jobs", routing_key="check_switch", body=body)
+
+    connection.close()
+
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ from flask import redirect
 from flask import url_for
 from pymongo import MongoClient
 from bson import ObjectId
+from check import get_device_info
 
 mongo_uri  = os.environ.get("MONGO_URI")
 db_name    = os.environ.get("DB_NAME")
@@ -38,18 +39,14 @@ def add_comment():
     username = request.form.get("username")
     password = request.form.get("password")
     if username and password and ip:
-        x = mycol.insert_one({"ip": ip,"username": username,"password": password})
+        device = {
+        'device_type': 'cisco_ios',
+        'host':   ip,   # <-- IP อุปกรณ์ของคุณ
+        'username': username,      # <-- Username
+        'password': password # <-- Password
+        }
+        get_device_info(device)
 
-    return redirect(url_for("main"))
-
-
-@app.route("/adds", methods=["POST"])
-def add_switch():
-    ip = request.form.get("ip")
-    username = request.form.get("username")
-    password = request.form.get("password")
-    if username and password and ip:
-        x = mysw.insert_one({"ip": ip,"username": username,"password": password})
 
     return redirect(url_for("main"))
 
@@ -64,6 +61,11 @@ def delete_switch(id):
     mysw.delete_one({"_id":ObjectId(id)})
     return redirect("/")
     
+@app.route("/router/<string:ip>")
+def router_detail(ip):
+    router_data = mycol.find_one({"host": ip})
+    return render_template("router.html", router_ip = ip)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)

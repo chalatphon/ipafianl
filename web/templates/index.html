@@ -4,7 +4,7 @@
     <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-    <h1>for router</h1>
+    <h1>Insert Device Detail</h1>
     <form method="POST" action="/add">
     <input name="ip" placeholder="ip" required />
     <input name="username" placeholder="username" required />
@@ -12,14 +12,6 @@
     <button type="submit">Add Comment</button>
   </form>
 
-
-      <h1>for switch</h1>
-    <form method="POST" action="/adds">
-    <input name="ip" placeholder="ip" required />
-    <input name="username" placeholder="username" required />
-    <input name="password" placeholder="password" required />
-    <button type="submit">Add Comment</button>
-  </form>
   <h1>Router</h1>
   <ul>
     {% for router in data %}

@@ -1,13 +1,12 @@
 import time
 
 from bson import json_util
-from producer import produce
-from database import get_router_info
-
+from producer import produce_router, produce_switch
+from database import get_router_info, get_switch_info
 
 def scheduler():
 
-    INTERVAL = 3.0
+    INTERVAL = 10.0
     next_run = time.monotonic()
     count = 0
 
@@ -21,7 +20,10 @@ def scheduler():
         try:
             for data in get_router_info():
                 body_bytes = json_util.dumps(data).encode("utf-8")
-                produce("rabbitmq", body_bytes)
+                produce_router("rabbitmq", body_bytes)
+            for datas in get_switch_info():
+                body_bytes = json_util.dumps(datas).encode("utf-8")
+                produce_switch("rabbitmq", body_bytes)
         except Exception as e:
             print(e)
             time.sleep(3)
