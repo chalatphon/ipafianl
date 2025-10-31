@@ -28,7 +28,9 @@ def consume(host):
     ch.queue_declare(queue="router_jobs")
     ch.queue_declare(queue="switch_job")
     ch.basic_qos(prefetch_count=1)
-    ch.basic_consume(queue="router_jobs", on_message_callback=callback_router, auto_ack=True)
+    ch.basic_consume(
+        queue="router_jobs", on_message_callback=callback_router, auto_ack=True
+    )
 
     ch.start_consuming()
 

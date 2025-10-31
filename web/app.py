@@ -8,17 +8,15 @@ from pymongo import MongoClient
 from bson import ObjectId
 from check import get_device_info
 
-mongo_uri  = os.environ.get("MONGO_URI")
-db_name    = os.environ.get("DB_NAME")
+mongo_uri = os.environ.get("MONGO_URI")
+db_name = os.environ.get("DB_NAME")
 client = MongoClient(mongo_uri)
 mydb = client[db_name]
 mycol = mydb["mycollection"]
 mysw = mydb["switch"]
 
 
-
 app = Flask(__name__)
-
 
 
 @app.route("/")
@@ -31,7 +29,8 @@ def main():
     for x in mysw.find():
         sdata.append(x)
         print(sdata)
-    return render_template("index.html", data=data,sdata=sdata)
+    return render_template("index.html", data=data, sdata=sdata)
+
 
 @app.route("/add", methods=["POST"])
 def add_comment():
@@ -40,32 +39,35 @@ def add_comment():
     password = request.form.get("password")
     if username and password and ip:
         device = {
-        'device_type': 'cisco_ios',
-        'host':   ip,   # <-- IP อุปกรณ์ของคุณ
-        'username': username,      # <-- Username
-        'password': password # <-- Password
+            "device_type": "cisco_ios",
+            "host": ip,  # <-- IP อุปกรณ์ของคุณ
+            "username": username,  # <-- Username
+            "password": password,  # <-- Password
         }
         get_device_info(device)
 
-
     return redirect(url_for("main"))
+
 
 @app.route("/delete/<id>", methods=["POST"])
 def delete_comment(id):
-    mycol.delete_one({"_id":ObjectId(id)})
+    mycol.delete_one({"_id": ObjectId(id)})
     return redirect("/")
-    
+
 
 @app.route("/delete/<id>", methods=["POST"])
 def delete_switch(id):
-    mysw.delete_one({"_id":ObjectId(id)})
+    mysw.delete_one({"_id": ObjectId(id)})
     return redirect("/")
-    
+
+
 @app.route("/router/<string:ip>")
 def router_detail(ip):
     docs = mydb.route_table.find({"router_ip": ip}).sort("timestamp", -1).limit(1)
     docsi = mydb.interface_status.find({"router_ip": ip}).sort("timestamp", -1).limit(1)
-    return render_template("router.html", router_ip = ip,routing = docs,interface_data = docsi)
+    return render_template(
+        "router.html", router_ip=ip, routing=docs, interface_data=docsi
+    )
 
 
 if __name__ == "__main__":

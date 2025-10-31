@@ -20,7 +20,8 @@ def save_interface_status(router_ip, interfaces):
     collection.insert_one(data)
     client.close()
 
-def save_route_table(router_ip,route_table_info):
+
+def save_route_table(router_ip, route_table_info):
     MONGO_URI = os.getenv("MONGO_URI")
     DB_NAME = os.getenv("DB_NAME")
 

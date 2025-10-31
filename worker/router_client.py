@@ -26,6 +26,7 @@ def get_interfaces(ip, username, password):
     print(json.dumps(result, indent=2))
     return result
 
+
 def get_route_table(ip, username, password):
     os.environ["NET_TEXTFSM"] = os.path.join(
         os.path.dirname(ntc_templates.__file__), "templates"
@@ -45,5 +46,6 @@ def get_route_table(ip, username, password):
     print(json.dumps(result, indent=2))
     return result
 
+
 if __name__ == "__main__":
-    get_route_table("10.0.15.133","admin","cisco")
+    get_route_table("10.0.15.133", "admin", "cisco")
