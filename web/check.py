@@ -71,7 +71,7 @@ def get_device_info(device):
 
             print(f"  ✅ Detected Device Type: {device_type}")
             if "Switch" in device_type:
-                print(f"  Device is a Switch. Saving credentials to MongoDB...")
+                print("  Device is a Switch. Saving credentials to MongoDB...")
 
                 # --- CORRECTION 3: แก้ไข Key ของ Dictionary ให้ตรงกับ Netmiko ---
                 switch_data = {
@@ -82,7 +82,7 @@ def get_device_info(device):
                 mysw.insert_one(switch_data)
                 print(f"  Successfully saved {device['host']} to the database.")
             elif "Router" in device_type:
-                print(f"  Device is a Router. Saving credentials to MongoDB...")
+                print("  Device is a Router. Saving credentials to MongoDB...")
 
                 # --- CORRECTION 3: แก้ไข Key ของ Dictionary ให้ตรงกับ Netmiko ---
                 Router_data = {

@@ -41,4 +41,4 @@ def produce_switch(host, body):
 
 
 if __name__ == "__main__":
-    produce("localhost", "192.168.1.44")
+    produce_router("localhost", "192.168.1.44")
