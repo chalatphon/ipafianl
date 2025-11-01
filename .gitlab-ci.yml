@@ -1,47 +1,10 @@
 stages:
   - test
   - build
-  # - deploy  <-- ลบ หรือ คอมเมนต์ stage นี้ไปก่อน
+  - deploy
 
-# ---------------------------------------------
-# Stage 1: Test (เหมือนเดิม)
-# ---------------------------------------------
-lint_and_format:
-  stage: test
-  image: python:3.12-slim
-  script:
-    - pip install flake8 black
-    - flake8 .
-    - black --check .
-
-# ---------------------------------------------
-# Stage 2: Build (เหมือนเดิม)
-# ---------------------------------------------
-build_images:
-  stage: build
-  image: docker:24.0-cli
-  services:
-    - docker:24.0-dind
-  variables:
-    IMAGE_TAG: $CI_COMMIT_SHORT_SHA
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  before_script:
-    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-  script:
-    - docker build -t chalatphon041/worker:$IMAGE_TAG ./worker
-    - docker build -t chalatphon041/scheduler:$IMAGE_TAG ./scheduler
-    - docker build -t chalatphon041/web:$IMAGE_TAG ./web
-    - docker push chalatphon041/worker:$IMAGE_TAG
-    - docker push chalatphon041/scheduler:$IMAGE_TAG
-    - docker push chalatphon041/web:$IMAGE_TAG
-    # (ทางเลือก) Push latest tag
-    - docker tag chalatphon041/worker:$IMAGE_TAG chalatphon041/worker:latest
-    - docker tag chalatphon041/scheduler:$IMAGE_TAG chalatphon041/scheduler:latest
-    - docker tag chalatphon041/web:$IMAGE_TAG chalatphon041/web:latest
-    - docker push chalatphon041/worker:latest
-    - docker push chalatphon041/scheduler:latest
-    - docker push chalatphon041/web:latest
-  rules:
-    - if: $CI_COMMIT_BRANCH == 'main'
+# นำเข้าไฟล์ CI และ CD
+include:
+  - local: 'gitlab-ci.yml'   # ไฟล์สำหรับ CI Jobs (test, build)
+  - local: 'gitlab-cd.yml'   # ไฟล์สำหรับ CD Jobs (deploy, mirror)
 

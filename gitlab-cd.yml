@@ -1,0 +1,51 @@
+mirror_app_repo_to_github:
+  stage: deploy
+  needs:
+    - build_images # เริ่มทำงานเมื่อ build ผ่าน
+  tags:
+    - deployer     # ⭐️ บังคับใช้ 'shell' runner
+  
+  # (Shell executor จะไม่ใช้ 'image:' หรือ 'before_script: - apk add')
+  # (มันจะใช้ 'git' ที่คุณติดตั้งไว้บนเซิร์ฟเวอร์ในขั้นตอนที่ 2)
+  
+  script:
+    - echo "Mirroring App Repo (Repo A) to GitHub..."
+    - cd ${CI_PROJECT_DIR} # (จำเป็นสำหรับ shell executor เพื่อให้แน่ใจว่าอยู่ใน path ที่ถูกต้อง)
+    - git clone --mirror https://gitlab-ci-token:${CI_JOB_TOKEN}@[gitlab.com/$](https://gitlab.com/$){CI_PROJECT_PATH}.git ./mirror-temp
+    - cd ./mirror-temp
+    - git push --mirror https://${GITHUB_USER}:${GITHUB_TOKEN}@[github.com/chalatphon/ipafianl.git](https://github.com/chalatphon/ipafianl.git)
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main'
+
+deploy_production:
+  stage: deploy
+  needs:
+    - build_images # เริ่มทำงานเมื่อ build ผ่าน
+  tags:
+    - deployer     # ⭐️ บังคับใช้ 'shell' runner
+
+  # (Shell executor จะใช้ 'docker' และ 'docker compose' ที่คุณติดตั้งไว้ในขั้นตอนที่ 2)
+  
+  before_script:
+    - echo "Logging in to Docker Hub..."
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  
+  script:
+    - echo "Creating .env file in ${CI_PROJECT_DIR}..."
+    - cd ${CI_PROJECT_DIR} # (สำคัญ: ย้ายไปที่ path ของโปรเจกต์ที่ถูก check out)
+    - |
+      {
+        echo "MONGO_INITDB_ROOT_USERNAME=$MONGO_INITDB_ROOT_USERNAME"
+        echo "MONGO_INITDB_ROOT_PASSWORD=$MONGO_INITDB_ROOT_PASSWORD"
+        echo "RABBITMQ_DEFAULT_USER=$RABBITMQ_DEFAULT_USER"
+        echo "RABBITMQ_DEFAULT_PASS=$RABBITMQ_DEFAULT_PASS"
+      } > .env
+    - chmod 600 .env
+
+    - echo "Pulling new images and restarting services..."
+    # (ตรวจสอบว่า path ของ docker-compose.prod.yml ถูกต้อง)
+    - docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always --no-build
+    - docker compose ps
+  
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main'
