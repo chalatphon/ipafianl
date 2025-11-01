@@ -1,68 +1,106 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Sample app</title>
+    <meta charset="utf-8" />
+    <title>Network Collector</title>
     <link rel="stylesheet" href="/static/style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body>
-    <h1>Insert Device Detail</h1>
-    <form method="POST" action="/add">
-    <input name="ip" placeholder="ip" required />
-    <input name="username" placeholder="username" required />
-    <input name="password" placeholder="password" required />
-    <button type="submit">Add Comment</button>
-  </form>
+<body class="page">
+    <header class="header">
+        <div>
+            <h1>Network Device Inventory</h1>
+            <p>ลงทะเบียน Router หรือ Switch เพื่อเก็บข้อมูลอัตโนมัติผ่าน Netmiko</p>
+        </div>
+    </header>
 
-  <h1 class="bg-red-500">Router</h1>
-  <ul>
-    {% for router in data %}
-      <li>
-	        <a href="/router/{{ router.ip }}" style="margin-left:8px;">{{ router.ip }}</a> - {{ router.username }}
-         <form action="/delete/{{ router._id }}" method="POST" style="display:inline;">
-          <button type="submit">Delete</button>
-         </form>
-      </li>
-    {% endfor %}
-  </ul>
-    <h1>Switch</h1>
-    <ul>
-    {% for switch in sdata %}
-      <li>
-	        <a href="/switch/{{ switch.ip }}" style="margin-left:8px;">{{ switch.ip }}</a> - {{ switch.username }}
-         <form action="/delete/{{ switch._id }}" method="POST" style="display:inline;">
-          <button type="submit">Delete</button>
-         </form>
-      </li>
-    {% endfor %}
-  </ul>
+    <section class="card">
+        <h2>เพิ่มอุปกรณ์</h2>
+        <form method="POST" action="/add" class="form-grid">
+            <label>
+                <span>IP Address</span>
+                <input name="ip" placeholder="10.0.0.1" required />
+            </label>
+            <label>
+                <span>Username</span>
+                <input name="username" placeholder="admin" required />
+            </label>
+            <label>
+                <span>Password</span>
+                <input name="password" type="password" placeholder="••••••" required />
+            </label>
+            <button type="submit" class="btn-primary">บันทึก</button>
+        </form>
+        <p class="hint">ระบบจะตรวจสอบคำสั่ง `show ip route` และ `show mac address-table` เพื่อแยกประเภทอุปกรณ์ให้เอง</p>
+    </section>
 
+    <section class="card">
+        <div class="card-header">
+            <h2>Routers</h2>
+            <span class="count">{{ routers|length }} ตัว</span>
+        </div>
+        {% if routers %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Username</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for router in routers %}
+                <tr>
+                    <td><a href="{{ url_for('router_detail', ip=router.ip) }}">{{ router.ip }}</a></td>
+                    <td>{{ router.username }}</td>
+                    <td>
+                        <form action="{{ url_for('delete_router', id=router._id) }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn-link">ลบ</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">ยังไม่มี Router ในระบบ</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <div class="card-header">
+            <h2>Switches</h2>
+            <span class="count">{{ switches|length }} ตัว</span>
+        </div>
+        {% if switches %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Username</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for switch in switches %}
+                <tr>
+                    <td><a href="{{ url_for('switch_detail', ip=switch.ip) }}">{{ switch.ip }}</a></td>
+                    <td>{{ switch.username }}</td>
+                    <td>
+                        <form action="{{ url_for('delete_switch', id=switch._id) }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn-link">ลบ</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">ยังไม่มี Switch ในระบบ</p>
+        {% endif %}
+    </section>
+
+    <footer class="footer">
+        <p>RabbitMQ scheduler จะเรียกข้อมูลทุก 10 วินาที และอัปเดตผลล่าสุดโดยอัตโนมัติ</p>
+    </footer>
 </body>
-<script>
-        // ฟังก์ชันสำหรับดึงข้อมูลใหม่มาอัปเดต
-        async function refreshTable() {
-            try {
-                // ดึงข้อมูลหน้าเว็บปัจจุบันมาใหม่ (จะได้เป็น Text HTML)
-                const response = await fetch(window.location.href); 
-                const htmlText = await response.text();
-
-                // แปลง Text HTML ให้เป็น Document Object เพื่อให้ค้นหา element ได้
-                const parser = new DOMParser();
-                const newDoc = parser.parseFromString(htmlText, 'text/html');
-
-                // ค้นหาตารางใหม่จากข้อมูลที่เพิ่งดึงมา
-                const newTableContainer = newDoc.getElementById('table-container');
-
-                // นำตารางใหม่ไปแทนที่ตารางเก่า
-                if (newTableContainer) {
-                    document.getElementById('table-container').innerHTML = newTableContainer.innerHTML;
-                }
-
-            } catch (error) {
-                console.error('Failed to refresh table:', error);
-            }
-        }
-
-        // สั่งให้ฟังก์ชัน refreshTable() ทำงานทุก 5 วินาที
-        setInterval(refreshTable, 5000); // 5000 มิลลิวินาที = 5 วินาที
-    </script>
 </html>

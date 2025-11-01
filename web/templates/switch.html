@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Switch {{ switch_ip }}</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="page">
+    <header class="header detail-header">
+        <div>
+            <h1>Switch: {{ switch_ip }}</h1>
+            <p>แสดงสถานะพอร์ตล่าสุดจาก Netmiko</p>
+        </div>
+        <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
+    </header>
+
+    <section class="card" id="table-container">
+        <h2>สถานะพอร์ต</h2>
+        {% if switch_status %}
+            {% set entry = switch_status[0] %}
+            <p class="hint">อัปเดตล่าสุด: {{ entry.timestamp }}</p>
+            {% if entry.ports %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Port</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>VLAN</th>
+                        <th>Duplex</th>
+                        <th>Speed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for port in entry.ports %}
+                    <tr>
+                        <td>{{ port.port }}</td>
+                        <td>{{ port.name or '-' }}</td>
+                        <td>{{ port.status }}</td>
+                        <td>{{ port.vlan }}</td>
+                        <td>{{ port.duplex }}</td>
+                        <td>{{ port.speed }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% elif entry.raw_output %}
+            <pre class="code-block">{{ entry.raw_output }}</pre>
+            {% else %}
+            <p class="empty">ยังไม่มีข้อมูลพอร์ตจากอุปกรณ์นี้</p>
+            {% endif %}
+        {% else %}
+            <p class="empty">ยังไม่มีข้อมูลสำหรับสวิตช์นี้</p>
+        {% endif %}
+    </section>
+
+    <script>
+        async function refreshTable() {
+            try {
+                const response = await fetch(window.location.href);
+                const htmlText = await response.text();
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(htmlText, 'text/html');
+                const newTableContainer = newDoc.getElementById('table-container');
+                if (newTableContainer) {
+                    document.getElementById('table-container').innerHTML = newTableContainer.innerHTML;
+                }
+            } catch (error) {
+                console.error('Failed to refresh switch table:', error);
+            }
+        }
+
+        setInterval(refreshTable, 5000);
+    </script>
+</body>
+</html>

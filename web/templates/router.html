@@ -1,65 +1,85 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Sample app</title>
+    <meta charset="utf-8" />
+    <title>Router {{ router_ip }}</title>
     <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body>
-    <h1>Router: {{ router_ip }}</h1>
-    <div id="table-container"> 
-        <h3>Route Table</h3>
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Protocal</th>
-                    <th>Network</th>
-                    <th>Distance</th>
-                    <th>Nexthop Ip</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for doc in routing %}
-                    {% for info in doc.route %}
-                    <tr>
-                        <td>{{ info.protocol }}</td>
-                        <td>{{ info.network }}/{{ info.prefix_length }}</td>
-                        <td>{{ info.distance }}</td>
-                        <td>{{ info.nexthop_ip }}</td>
-                    </tr>
-                    {% endfor %}
-                {% endfor %}
-            </tbody>
-        </table>
+<body class="page">
+    <header class="header detail-header">
+        <div>
+            <h1>Router: {{ router_ip }}</h1>
+            <p>สรุป Route Table และ Interface Status ล่าสุด</p>
+        </div>
+        <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
+    </header>
 
-        <h3>Interface Status</h3>
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Interface</th>
-                    <th>IP Address</th>
-                    <th>Status</th>
-                    <th>Protocol</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for docs in interface_data %}
-                    {% for intf in docs.interfaces %}
-                    <tr>
-                        <td>{{ docs.timestamp }}</td>
-                        <td>{{ intf.interface }}</td>
-                        <td>{{ intf.ip_address }}</td>
-                        <td>{{ intf.status }}</td>
-                        <td>{{ intf.proto }}</td>
-                    </tr>
-                    {% endfor %}
-                {% endfor %}
-            </tbody>
-        </table>
+    <section class="card" id="table-container">
+        <div class="card-split">
+            <div class="card-block">
+                <h2>Route Table</h2>
+                {% if routing %}
+                    <p class="hint">อัปเดตล่าสุด: {{ routing[0].timestamp }}</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Protocol</th>
+                                <th>Network</th>
+                                <th>Distance</th>
+                                <th>Next Hop</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for info in routing[0].route %}
+                            <tr>
+                                <td>{{ info.protocol }}</td>
+                                <td>{{ info.network }}/{{ info.prefix_length }}</td>
+                                <td>{{ info.distance }}</td>
+                                <td>{{ info.nexthop_ip }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="empty">ยังไม่มีข้อมูลเส้นทาง</p>
+                {% endif %}
+            </div>
 
-    </div> <script>
+            <div class="card-block">
+                <h2>Interface Status</h2>
+                {% if interface_data %}
+                    <p class="hint">อัปเดตล่าสุด: {{ interface_data[0].timestamp }}</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Interface</th>
+                                <th>IP Address</th>
+                                <th>Status</th>
+                                <th>Protocol</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for intf in interface_data[0].interfaces %}
+                            <tr>
+                                <td>{{ intf.interface }}</td>
+                                <td>{{ intf.ip_address }}</td>
+                                <td>{{ intf.status }}</td>
+                                <td>{{ intf.proto }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="empty">ยังไม่มีข้อมูลสถานะอินเทอร์เฟซ</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <script>
         async function refreshTable() {
             try {
-                const response = await fetch(window.location.href); 
+                const response = await fetch(window.location.href);
                 const htmlText = await response.text();
                 const parser = new DOMParser();
                 const newDoc = parser.parseFromString(htmlText, 'text/html');
@@ -67,12 +87,12 @@
                 if (newTableContainer) {
                     document.getElementById('table-container').innerHTML = newTableContainer.innerHTML;
                 }
-
             } catch (error) {
-                console.error('Failed to refresh table:', error);
+                console.error('Failed to refresh router tables:', error);
             }
         }
-        setInterval(refreshTable, 5000); 
+
+        setInterval(refreshTable, 5000);
     </script>
 </body>
 </html>

@@ -35,3 +35,24 @@ def save_route_table(router_ip, route_table_info):
     }
     collection.insert_one(data)
     client.close()
+
+
+def save_switch_status(switch_ip, ports, raw_output=None):
+    MONGO_URI = os.getenv("MONGO_URI")
+    DB_NAME = os.getenv("DB_NAME")
+
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    collection = db["switch_status"]
+
+    data = {
+        "switch_ip": switch_ip,
+        "timestamp": datetime.now(UTC),
+        "ports": ports,
+    }
+
+    if raw_output:
+        data["raw_output"] = raw_output
+
+    collection.insert_one(data)
+    client.close()
