@@ -4,6 +4,7 @@ from flask import request
 from flask import render_template
 from flask import redirect
 from flask import url_for
+from flask import flash
 from pymongo import MongoClient
 from bson import ObjectId
 from check import get_device_info
@@ -17,6 +18,7 @@ mysw = mydb["switch"]
 
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET", "change-me")
 
 
 @app.route("/")
@@ -38,20 +40,32 @@ def add_comment():
             "username": username,  # <-- Username
             "password": password,  # <-- Password
         }
-        get_device_info(device)
+        success, message = get_device_info(device)
+        category = "success" if success else "error"
+        flash(message, category=category)
+    else:
+        flash("กรุณากรอก IP, Username, Password ให้ครบ", category="error")
 
     return redirect(url_for("main"))
 
 
 @app.route("/routers/<id>/delete", methods=["POST"])
 def delete_router(id):
-    mycol.delete_one({"_id": ObjectId(id)})
+    result = mycol.delete_one({"_id": ObjectId(id)})
+    if result.deleted_count:
+        flash("ลบ Router เรียบร้อย", category="success")
+    else:
+        flash("ไม่พบ Router ที่ต้องการลบ", category="error")
     return redirect(url_for("main"))
 
 
 @app.route("/switches/<id>/delete", methods=["POST"])
 def delete_switch(id):
-    mysw.delete_one({"_id": ObjectId(id)})
+    result = mysw.delete_one({"_id": ObjectId(id)})
+    if result.deleted_count:
+        flash("ลบ Switch เรียบร้อย", category="success")
+    else:
+        flash("ไม่พบ Switch ที่ต้องการลบ", category="error")
     return redirect(url_for("main"))
 
 

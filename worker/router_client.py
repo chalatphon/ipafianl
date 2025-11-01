@@ -1,8 +1,26 @@
-import ntc_templates
 import os
 import json
 
+import ntc_templates
 from netmiko import ConnectHandler
+from paramiko.transport import Transport
+
+LEGACY_KEX = (
+    "diffie-hellman-group14-sha1",
+    "diffie-hellman-group-exchange-sha1",
+)
+Transport._preferred_kex = tuple(
+    dict.fromkeys(LEGACY_KEX + Transport._preferred_kex)
+)
+LEGACY_KEYS = ("ssh-rsa",)
+for attr in ("_preferred_keys", "_preferred_pubkeys"):
+    current = getattr(Transport, attr, None)
+    if current:
+        setattr(
+            Transport,
+            attr,
+            tuple(dict.fromkeys(LEGACY_KEYS + current)),
+        )
 
 
 def get_interfaces(ip, username, password):
@@ -16,10 +34,14 @@ def get_interfaces(ip, username, password):
         "host": ip,
         "username": username,
         "password": password,
+        "secret": password,
     }
 
     with ConnectHandler(**device) as conn:
-        conn.enable()
+        try:
+            conn.enable()
+        except Exception as exc:
+            print(f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable.")
         result = conn.send_command("show ip int br", use_textfsm=True)
         conn.disconnect()
 
@@ -36,10 +58,14 @@ def get_route_table(ip, username, password):
         "host": ip,
         "username": username,
         "password": password,
+        "secret": password,
     }
 
     with ConnectHandler(**device) as conn:
-        conn.enable()
+        try:
+            conn.enable()
+        except Exception as exc:
+            print(f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable.")
         result = conn.send_command("show ip route", use_textfsm=True)
         conn.disconnect()
 
@@ -57,10 +83,14 @@ def get_switch_ports(ip, username, password):
         "host": ip,
         "username": username,
         "password": password,
+        "secret": password,
     }
 
     with ConnectHandler(**device) as conn:
-        conn.enable()
+        try:
+            conn.enable()
+        except Exception as exc:
+            print(f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable.")
         result = conn.send_command("show interfaces status", use_textfsm=True)
         conn.disconnect()
 

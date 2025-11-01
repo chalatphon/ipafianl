@@ -14,6 +14,16 @@
         <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
     </header>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <section class="alert-stack">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    </section>
+    {% endif %}
+    {% endwith %}
+
     <section class="card" id="table-container">
         <h2>สถานะพอร์ต</h2>
         {% if switch_status %}

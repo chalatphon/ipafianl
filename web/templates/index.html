@@ -13,6 +13,16 @@
         </div>
     </header>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <section class="alert-stack">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    </section>
+    {% endif %}
+    {% endwith %}
+
     <section class="card">
         <h2>เพิ่มอุปกรณ์</h2>
         <form method="POST" action="/add" class="form-grid">
