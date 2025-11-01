@@ -1,4 +1,5 @@
 import os
+import ipaddress
 from flask import Flask
 from flask import request
 from flask import render_template
@@ -8,6 +9,7 @@ from flask import flash
 from pymongo import MongoClient
 from bson import ObjectId
 from check import get_device_info
+from router_actions import create_loopback, set_loopback_state, delete_loopback
 
 mongo_uri = os.environ.get("MONGO_URI")
 db_name = os.environ.get("DB_NAME")
@@ -15,6 +17,7 @@ client = MongoClient(mongo_uri)
 mydb = client[db_name]
 mycol = mydb["mycollection"]
 mysw = mydb["switch"]
+loopbacks = mydb["loopbacks"]
 
 
 app = Flask(__name__)
@@ -33,6 +36,7 @@ def add_comment():
     ip = request.form.get("ip")
     username = request.form.get("username")
     password = request.form.get("password")
+    secret = request.form.get("secret", "").strip()
     if username and password and ip:
         device = {
             "device_type": "cisco_ios",
@@ -40,6 +44,8 @@ def add_comment():
             "username": username,  # <-- Username
             "password": password,  # <-- Password
         }
+        if secret:
+            device["secret"] = secret
         success, message = get_device_info(device)
         category = "success" if success else "error"
         flash(message, category=category)
@@ -77,8 +83,22 @@ def router_detail(ip):
     docsi = list(
         mydb.interface_status.find({"router_ip": ip}).sort("timestamp", -1).limit(1)
     )
+    loopback_records = list(loopbacks.find({"router_ip": ip}))
+
+    status_map = {}
+    if docsi:
+        for intf in docsi[0].get("interfaces", []):
+            name = intf.get("interface")
+            if name and name.lower().startswith("loopback"):
+                status_map[name] = intf
+
     return render_template(
-        "router.html", router_ip=ip, routing=docs, interface_data=docsi
+        "router.html",
+        router_ip=ip,
+        routing=docs,
+        interface_data=docsi,
+        loopbacks=loopback_records,
+        loopback_status=status_map,
     )
 
 
@@ -90,6 +110,140 @@ def switch_detail(ip):
         .limit(1)
     )
     return render_template("switch.html", switch_ip=ip, switch_status=status)
+
+
+@app.route("/router/<string:ip>/loopbacks", methods=["POST"])
+def create_loopback_route(ip):
+    loopback_id = request.form.get("loopback_id", "").strip()
+    ip_address = request.form.get("loopback_ip", "").strip()
+    netmask = request.form.get("loopback_netmask", "").strip()
+    override_secret = request.form.get("loopback_secret", "").strip()
+
+    if not all([loopback_id, ip_address, netmask]):
+        flash("กรุณากรอก Loopback, IP และ Netmask ให้ครบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    try:
+        if "/" in ip_address:
+            iface = ipaddress.IPv4Interface(ip_address)
+            ip_address = str(iface.ip)
+            if not netmask or netmask.startswith("/"):
+                netmask = str(iface.netmask)
+        if netmask.startswith("/"):
+            prefix = int(netmask.lstrip("/"))
+            netmask = str(ipaddress.IPv4Network(f"0.0.0.0/{prefix}").netmask)
+        # Validate addresses
+        ipaddress.IPv4Address(ip_address)
+        ipaddress.IPv4Address(netmask)
+    except ValueError:
+        flash("รูปแบบ IP หรือ Netmask ไม่ถูกต้อง", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    creds = mycol.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Router ในระบบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    try:
+        success, payload = create_loopback(
+            creds, loopback_id, ip_address, netmask, secret=override_secret or None
+        )
+    except ValueError as exc:
+        flash(str(exc), category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    if success:
+        loopbacks.update_one(
+            {
+                "router_ip": payload["router_ip"],
+                "interface": payload["interface"],
+            },
+            {"$set": payload, "$setOnInsert": {"created_at": payload["updated_at"]}},
+            upsert=True,
+        )
+        flash(f"สร้าง {payload['interface']} สำเร็จ", category="success")
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Router ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("router_detail", ip=ip))
+
+
+@app.route("/router/<string:ip>/loopbacks/<loop_id>/state", methods=["POST"])
+def update_loopback_state(ip, loop_id):
+    action = request.form.get("action")
+    creds = mycol.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Router ในระบบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    if action not in {"enable", "disable"}:
+        flash("ไม่ทราบคำสั่งสำหรับ Loopback", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    enabled = action == "enable"
+    try:
+        success, payload = set_loopback_state(creds, loop_id, enabled=enabled)
+    except ValueError as exc:
+        flash(str(exc), category="error")
+        return redirect(url_for("router_detail", ip=ip))
+    if success:
+        loopbacks.update_one(
+            {"router_ip": ip, "interface": payload["interface"]},
+            {
+                "$set": {
+                    "admin_state": payload["admin_state"],
+                    "updated_at": payload["updated_at"],
+                },
+                "$setOnInsert": {
+                    "router_ip": ip,
+                    "interface": payload["interface"],
+                },
+            },
+            upsert=True,
+        )
+        state_text = "เปิด" if enabled else "ปิด"
+        flash(f"{state_text} {payload['interface']} สำเร็จ", category="success")
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Router ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("router_detail", ip=ip))
+
+
+@app.route("/router/<string:ip>/loopbacks/<loop_id>/delete", methods=["POST"])
+def delete_loopback_route(ip, loop_id):
+    creds = mycol.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Router ในระบบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    override_secret = request.form.get("loopback_secret", "").strip()
+    try:
+        success, payload = delete_loopback(
+            creds, loop_id, secret=override_secret or None
+        )
+    except ValueError as exc:
+        flash(str(exc), category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    if success:
+        loopbacks.delete_one({"router_ip": ip, "interface": payload["interface"]})
+        flash(f"ลบ {payload['interface']} สำเร็จ", category="success")
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Router ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("router_detail", ip=ip))
 
 
 if __name__ == "__main__":

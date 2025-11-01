@@ -11,7 +11,10 @@
             <h1>Router: {{ router_ip }}</h1>
             <p>สรุป Route Table และ Interface Status ล่าสุด</p>
         </div>
-        <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
+        <div class="action-buttons">
+            <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
+            <a href="{{ url_for('router_detail', ip=router_ip) }}" class="btn-secondary">Refresh</a>
+        </div>
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -26,6 +29,79 @@
 
     <section class="card" id="table-container">
         <div class="card-split">
+            <div class="card-block">
+                <h2>Loopback Interfaces</h2>
+                <form method="POST" action="{{ url_for('create_loopback_route', ip=router_ip) }}" class="loopback-form">
+                    <label>
+                        <span>Loopback ID</span>
+                        <input name="loopback_id" placeholder="1 หรือ Loopback1" required />
+                    </label>
+                    <label>
+                        <span>IP Address</span>
+                        <input name="loopback_ip" placeholder="10.10.10.1" required />
+                    </label>
+                    <label>
+                        <span>Netmask</span>
+                        <input name="loopback_netmask" placeholder="255.255.255.255" required />
+                    </label>
+                    <label>
+                        <span>Enable Secret (override)</span>
+                        <input name="loopback_secret" type="password" placeholder="ใส่ถ้าไม่ตรงกับข้อมูลเดิม" />
+                    </label>
+                    <button type="submit" class="btn-primary">สร้าง Loopback</button>
+                </form>
+
+                {% if loopbacks %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Interface</th>
+                            <th>IP</th>
+                            <th>Netmask</th>
+                            <th>Admin</th>
+                            <th>Oper</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in loopbacks %}
+                        {% set status = loopback_status.get(item.interface) %}
+                        <tr>
+                            <td>{{ item.interface }}</td>
+                            <td>{{ item.ip or '-' }}</td>
+                            <td>{{ item.netmask or '-' }}</td>
+                            <td>{{ item.admin_state|default('unknown') }}</td>
+                            <td>
+                                {% if status %}
+                                    {{ status.status }}/{{ status.proto }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                           <td>
+                                <div class="loopback-actions">
+                                    <form action="{{ url_for('update_loopback_state', ip=router_ip, loop_id=item.interface) }}" method="POST" class="inline-form">
+                                        <input type="hidden" name="action" value="enable" />
+                                        <button type="submit" class="btn-chip success">Enable</button>
+                                    </form>
+                                    <form action="{{ url_for('update_loopback_state', ip=router_ip, loop_id=item.interface) }}" method="POST" class="inline-form">
+                                        <input type="hidden" name="action" value="disable" />
+                                        <button type="submit" class="btn-chip warning">Disable</button>
+                                    </form>
+                                    <form action="{{ url_for('delete_loopback_route', ip=router_ip, loop_id=item.interface) }}" method="POST" class="inline-form">
+                                        <button type="submit" class="btn-chip danger">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">ยังไม่มี Loopback ในระบบ</p>
+                {% endif %}
+            </div>
+
             <div class="card-block">
                 <h2>Route Table</h2>
                 {% if routing %}
@@ -86,23 +162,5 @@
         </div>
     </section>
 
-    <script>
-        async function refreshTable() {
-            try {
-                const response = await fetch(window.location.href);
-                const htmlText = await response.text();
-                const parser = new DOMParser();
-                const newDoc = parser.parseFromString(htmlText, 'text/html');
-                const newTableContainer = newDoc.getElementById('table-container');
-                if (newTableContainer) {
-                    document.getElementById('table-container').innerHTML = newTableContainer.innerHTML;
-                }
-            } catch (error) {
-                console.error('Failed to refresh router tables:', error);
-            }
-        }
-
-        setInterval(refreshTable, 5000);
-    </script>
 </body>
 </html>

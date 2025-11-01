@@ -103,6 +103,26 @@ body {
     gap: 0.5rem;
 }
 
+.loopback-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.loopback-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-weight: 600;
+}
+
+.loopback-form input {
+    padding: 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
 .form-grid input {
     padding: 0.75rem;
     border: 1px solid #cbd5e1;
@@ -150,6 +170,11 @@ body {
     justify-content: space-between;
 }
 
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .hint {
     margin-top: 0.75rem;
     color: #64748b;
@@ -194,9 +219,45 @@ body {
     text-decoration: underline;
 }
 
+.btn-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.9rem;
+    margin-right: 0.35rem;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #fff;
+}
+
+.btn-chip.success {
+    background: #16a34a;
+}
+
+.btn-chip.warning {
+    background: #f97316;
+}
+
+.btn-chip.danger {
+    background: #dc2626;
+}
+
+.btn-chip:hover {
+    opacity: 0.9;
+}
+
 .empty {
     margin: 0;
     color: #94a3b8;
+}
+
+.loopback-actions {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
 }
 
 .code-block {

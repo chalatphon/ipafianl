@@ -98,6 +98,8 @@ def get_device_info(device):
                     "username": device["username"],
                     "password": device["password"],
                 }
+                if device.get("secret"):
+                    switch_data["secret"] = device["secret"]
                 existing = mysw.find_one({"ip": device["host"]})
                 if existing:
                     mysw.update_one(
@@ -117,6 +119,8 @@ def get_device_info(device):
                     "username": device["username"],
                     "password": device["password"],
                 }
+                if device.get("secret"):
+                    router_data["secret"] = device["secret"]
                 existing = mycol.find_one({"ip": device["host"]})
                 if existing:
                     mycol.update_one(
