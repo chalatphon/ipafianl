@@ -24,6 +24,13 @@ build_images:
     - docker push chalatphon041/worker:$IMAGE_TAG
     - docker push chalatphon041/scheduler:$IMAGE_TAG
     - docker push chalatphon041/web:$IMAGE_TAG
+    - echo "Tagging as :latest and pushing..."
+    - docker tag chalatphon041/worker:$IMAGE_TAG chalatphon041/worker:latest
+    - docker tag chalatphon041/scheduler:$IMAGE_TAG chalatphon041/scheduler:latest
+    - docker tag chalatphon041/web:$IMAGE_TAG chalatphon041/web:latest
+    - docker push chalatphon041/worker:latest
+    - docker push chalatphon041/scheduler:latest
+    - docker push chalatphon041/web:latest
   rules:
     - if: $CI_COMMIT_BRANCH == 'main'
 
