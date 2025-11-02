@@ -444,7 +444,10 @@ def create_static_route_route(ip):
             upsert=True,
         )
         flash(
-            f"เพิ่ม static route {payload['network']}/{payload['prefix_length']} → {payload['next_hop']} สำเร็จ",
+            (
+                f"เพิ่ม static route {payload['network']}/{payload['prefix_length']} "
+                f"→ {payload['next_hop']} สำเร็จ"
+            ),
             category="success",
         )
     else:
