@@ -30,6 +30,7 @@ for attr in ("_preferred_keys", "_preferred_pubkeys"):
             tuple(dict.fromkeys(LEGACY_KEYS + current)),
         )
 
+
 def get_device_info(device):
     """
     Connects to a device using Netmiko and determines its type based on its

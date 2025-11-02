@@ -263,6 +263,8 @@ def delete_switch_vlan(ip, vlan_id):
                 category="error",
             )
     return redirect(url_for("switch_detail", ip=ip))
+
+
 @app.route("/router/<string:ip>/loopbacks", methods=["POST"])
 def create_loopback_route(ip):
     loopback_id = request.form.get("loopback_id", "").strip()
