@@ -9,9 +9,12 @@
     <header class="header detail-header">
         <div>
             <h1>Switch: {{ switch_ip }}</h1>
-            <p>แสดงสถานะพอร์ตล่าสุดจาก Netmiko</p>
+            <p>บริหารจัดการ VLAN และดูสถานะพอร์ตล่าสุด</p>
         </div>
-        <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
+        <div class="action-buttons">
+            <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
+            <a href="{{ url_for('switch_detail', ip=switch_ip) }}" class="btn-secondary">Refresh</a>
+        </div>
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -24,7 +27,80 @@
     {% endif %}
     {% endwith %}
 
-    <section class="card" id="table-container">
+    <section class="card">
+        <h2>VLAN Interfaces</h2>
+        <form method="POST" action="{{ url_for('create_switch_vlan', ip=switch_ip) }}" class="loopback-form">
+            <label>
+                <span>VLAN ID</span>
+                <input name="vlan_id" placeholder="10 หรือ Vlan10" required />
+            </label>
+            <label>
+                <span>ชื่อ VLAN (ถ้ามี)</span>
+                <input name="vlan_name" placeholder="Management" />
+            </label>
+            <label>
+                <span>IP Address</span>
+                <input name="vlan_ip" placeholder="10.10.10.1" required />
+            </label>
+            <label>
+                <span>Netmask</span>
+                <input name="vlan_netmask" placeholder="255.255.255.0" required />
+            </label>
+            <label>
+                <span>Enable Secret (override)</span>
+                <input name="vlan_secret" type="password" placeholder="ใส่หากต่างจากข้อมูลเดิม" />
+            </label>
+            <button type="submit" class="btn-primary">สร้าง VLAN</button>
+        </form>
+
+        {% if vlans %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>VLAN</th>
+                    <th>Interface</th>
+                    <th>ชื่อ</th>
+                    <th>IP</th>
+                    <th>Netmask</th>
+                    <th>สถานะ</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vlan in vlans %}
+                {% set status = vlan_status.get(vlan.interface) %}
+                <tr>
+                    <td>{{ vlan.vlan }}</td>
+                    <td>{{ vlan.interface }}</td>
+                    <td>{{ vlan.name or '-' }}</td>
+                    <td>{{ vlan.ip or '-' }}</td>
+                    <td>{{ vlan.netmask or '-' }}</td>
+                    <td>{{ vlan.admin_state|default(status.admin_state if status else 'unknown') }}</td>
+                    <td>
+                        <div class="loopback-actions">
+                            <form action="{{ url_for('update_switch_vlan_state', ip=switch_ip, vlan_id=vlan.vlan) }}" method="POST" class="inline-form">
+                                <input type="hidden" name="action" value="enable" />
+                                <button type="submit" class="btn-chip success">Enable</button>
+                            </form>
+                            <form action="{{ url_for('update_switch_vlan_state', ip=switch_ip, vlan_id=vlan.vlan) }}" method="POST" class="inline-form">
+                                <input type="hidden" name="action" value="disable" />
+                                <button type="submit" class="btn-chip warning">Disable</button>
+                            </form>
+                            <form action="{{ url_for('delete_switch_vlan', ip=switch_ip, vlan_id=vlan.vlan) }}" method="POST" class="inline-form">
+                                <button type="submit" class="btn-chip danger">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">ยังไม่มี VLAN Interface ในระบบ</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
         <h2>สถานะพอร์ต</h2>
         {% if switch_status %}
             {% set entry = switch_status[0] %}
@@ -63,24 +139,5 @@
             <p class="empty">ยังไม่มีข้อมูลสำหรับสวิตช์นี้</p>
         {% endif %}
     </section>
-
-    <script>
-        async function refreshTable() {
-            try {
-                const response = await fetch(window.location.href);
-                const htmlText = await response.text();
-                const parser = new DOMParser();
-                const newDoc = parser.parseFromString(htmlText, 'text/html');
-                const newTableContainer = newDoc.getElementById('table-container');
-                if (newTableContainer) {
-                    document.getElementById('table-container').innerHTML = newTableContainer.innerHTML;
-                }
-            } catch (error) {
-                console.error('Failed to refresh switch table:', error);
-            }
-        }
-
-        setInterval(refreshTable, 5000);
-    </script>
 </body>
 </html>

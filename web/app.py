@@ -10,6 +10,11 @@ from pymongo import MongoClient
 from bson import ObjectId
 from check import get_device_info
 from router_actions import create_loopback, set_loopback_state, delete_loopback
+from switch_actions import (
+    create_vlan_interface,
+    set_vlan_state,
+    delete_vlan,
+)
 
 mongo_uri = os.environ.get("MONGO_URI")
 db_name = os.environ.get("DB_NAME")
@@ -18,6 +23,7 @@ mydb = client[db_name]
 mycol = mydb["mycollection"]
 mysw = mydb["switch"]
 loopbacks = mydb["loopbacks"]
+switch_vlans = mydb["switch_vlans"]
 
 
 app = Flask(__name__)
@@ -109,9 +115,154 @@ def switch_detail(ip):
         .sort("timestamp", -1)
         .limit(1)
     )
-    return render_template("switch.html", switch_ip=ip, switch_status=status)
+    vlans = list(switch_vlans.find({"switch_ip": ip}))
+    vlan_status_map = {entry["interface"]: entry for entry in vlans}
+    return render_template(
+        "switch.html",
+        switch_ip=ip,
+        switch_status=status,
+        vlans=vlans,
+        vlan_status=vlan_status_map,
+    )
 
 
+@app.route("/switch/<string:ip>/vlans", methods=["POST"])
+def create_switch_vlan(ip):
+    vlan_id = request.form.get("vlan_id", "").strip()
+    name = request.form.get("vlan_name", "").strip()
+    ip_address = request.form.get("vlan_ip", "").strip()
+    netmask = request.form.get("vlan_netmask", "").strip()
+    override_secret = request.form.get("vlan_secret", "").strip()
+
+    if not all([vlan_id, ip_address, netmask]):
+        flash("กรุณากรอก VLAN, IP, Netmask ให้ครบ", category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    try:
+        if "/" in ip_address:
+            iface = ipaddress.IPv4Interface(ip_address)
+            ip_address = str(iface.ip)
+            if not netmask or netmask.startswith("/"):
+                netmask = str(iface.netmask)
+        if netmask.startswith("/"):
+            prefix = int(netmask.lstrip("/"))
+            netmask = str(ipaddress.IPv4Network(f"0.0.0.0/{prefix}").netmask)
+        ipaddress.IPv4Address(ip_address)
+        ipaddress.IPv4Address(netmask)
+    except ValueError:
+        flash("รูปแบบ IP หรือ Netmask ไม่ถูกต้อง", category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    creds = mysw.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Switch ในระบบ", category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    try:
+        success, payload = create_vlan_interface(
+            creds,
+            vlan_id,
+            ip_address,
+            netmask,
+            name=name or None,
+            secret=override_secret or None,
+        )
+    except ValueError as exc:
+        flash(str(exc), category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    if success:
+        switch_vlans.update_one(
+            {"switch_ip": payload["switch_ip"], "vlan": payload["vlan"]},
+            {"$set": payload, "$setOnInsert": {"created_at": payload["updated_at"]}},
+            upsert=True,
+        )
+        flash(f"สร้าง {payload['interface']} สำเร็จ", category="success")
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Switch ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("switch_detail", ip=ip))
+
+
+@app.route("/switch/<string:ip>/vlans/<vlan_id>/state", methods=["POST"])
+def update_switch_vlan_state(ip, vlan_id):
+    action = request.form.get("action")
+    override_secret = request.form.get("vlan_secret", "").strip()
+    creds = mysw.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Switch ในระบบ", category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    if action not in {"enable", "disable"}:
+        flash("ไม่ทราบคำสั่งสำหรับ VLAN", category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    enabled = action == "enable"
+    try:
+        success, payload = set_vlan_state(
+            creds, vlan_id, enabled=enabled, secret=override_secret or None
+        )
+    except ValueError as exc:
+        flash(str(exc), category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    if success:
+        switch_vlans.update_one(
+            {"switch_ip": ip, "vlan": payload["vlan"]},
+            {
+                "$set": {
+                    "admin_state": payload["admin_state"],
+                    "updated_at": payload["updated_at"],
+                },
+                "$setOnInsert": {
+                    "switch_ip": ip,
+                    "vlan": payload["vlan"],
+                    "interface": payload["interface"],
+                },
+            },
+            upsert=True,
+        )
+        state_text = "เปิด" if enabled else "ปิด"
+        flash(f"{state_text} {payload['interface']} สำเร็จ", category="success")
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Switch ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("switch_detail", ip=ip))
+
+
+@app.route("/switch/<string:ip>/vlans/<vlan_id>/delete", methods=["POST"])
+def delete_switch_vlan(ip, vlan_id):
+    override_secret = request.form.get("vlan_secret", "").strip()
+    creds = mysw.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Switch ในระบบ", category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    try:
+        success, payload = delete_vlan(creds, vlan_id, secret=override_secret or None)
+    except ValueError as exc:
+        flash(str(exc), category="error")
+        return redirect(url_for("switch_detail", ip=ip))
+
+    if success:
+        switch_vlans.delete_one({"switch_ip": ip, "vlan": payload["vlan"]})
+        flash(f"ลบ {payload['interface']} สำเร็จ", category="success")
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Switch ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("switch_detail", ip=ip))
 @app.route("/router/<string:ip>/loopbacks", methods=["POST"])
 def create_loopback_route(ip):
     loopback_id = request.form.get("loopback_id", "").strip()
