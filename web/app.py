@@ -9,7 +9,13 @@ from flask import flash
 from pymongo import MongoClient
 from bson import ObjectId
 from check import get_device_info
-from router_actions import create_loopback, set_loopback_state, delete_loopback
+from router_actions import (
+    create_loopback,
+    set_loopback_state,
+    delete_loopback,
+    create_static_route,
+    delete_static_route,
+)
 from switch_actions import (
     create_vlan_interface,
     set_vlan_state,
@@ -24,6 +30,7 @@ mycol = mydb["mycollection"]
 mysw = mydb["switch"]
 loopbacks = mydb["loopbacks"]
 switch_vlans = mydb["switch_vlans"]
+router_routes = mydb["router_routes"]
 
 
 app = Flask(__name__)
@@ -88,6 +95,7 @@ def router_detail(ip):
         mydb.interface_status.find({"router_ip": ip}).sort("timestamp", -1).limit(1)
     )
     loopback_records = list(loopbacks.find({"router_ip": ip}))
+    static_routes = list(router_routes.find({"router_ip": ip}))
 
     status_map = {}
     if docsi:
@@ -103,6 +111,7 @@ def router_detail(ip):
         interface_data=docsi,
         loopbacks=loopback_records,
         loopback_status=status_map,
+        static_routes=static_routes,
     )
 
 
@@ -385,6 +394,94 @@ def delete_loopback_route(ip, loop_id):
     if success:
         loopbacks.delete_one({"router_ip": ip, "interface": payload["interface"]})
         flash(f"ลบ {payload['interface']} สำเร็จ", category="success")
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Router ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("router_detail", ip=ip))
+
+
+@app.route("/router/<string:ip>/routes", methods=["POST"])
+def create_static_route_route(ip):
+    destination = request.form.get("route_destination", "").strip()
+    netmask = request.form.get("route_netmask", "").strip()
+    next_hop = request.form.get("route_next_hop", "").strip()
+    override_secret = request.form.get("route_secret", "").strip()
+
+    if not all([destination, next_hop]):
+        flash("กรุณากรอกปลายทางและ Next Hop ให้ครบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    creds = mycol.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Router ในระบบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    try:
+        success, payload = create_static_route(
+            creds,
+            destination,
+            netmask or None,
+            next_hop,
+            secret=override_secret or None,
+        )
+    except ValueError as exc:
+        flash(str(exc), category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    if success:
+        router_routes.update_one(
+            {
+                "router_ip": payload["router_ip"],
+                "network": payload["network"],
+                "netmask": payload["netmask"],
+                "next_hop": payload["next_hop"],
+            },
+            {"$set": payload, "$setOnInsert": {"created_at": payload["updated_at"]}},
+            upsert=True,
+        )
+        flash(
+            f"เพิ่ม static route {payload['network']}/{payload['prefix_length']} → {payload['next_hop']} สำเร็จ",
+            category="success",
+        )
+    else:
+        flash(payload, category="error")
+        if "privileged mode" in payload.lower() and not creds.get("secret"):
+            flash(
+                "กรุณาเพิ่ม Enable Secret ให้ Router ในหน้าหลัก แล้วลองอีกครั้ง",
+                category="error",
+            )
+    return redirect(url_for("router_detail", ip=ip))
+
+
+@app.route("/router/<string:ip>/routes/<route_id>/delete", methods=["POST"])
+def delete_static_route_route(ip, route_id):
+    creds = mycol.find_one({"ip": ip})
+    if not creds:
+        flash("ไม่พบข้อมูล Router ในระบบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    record = router_routes.find_one({"_id": ObjectId(route_id), "router_ip": ip})
+    if not record:
+        flash("ไม่พบ static route ที่ต้องการลบ", category="error")
+        return redirect(url_for("router_detail", ip=ip))
+
+    success, payload = delete_static_route(
+        creds,
+        record["network"],
+        record["netmask"],
+        record["next_hop"],
+        secret=None,
+    )
+    if success:
+        router_routes.delete_one({"_id": record["_id"]})
+        flash(
+            f"ลบ static route {record['network']}/{record.get('prefix_length')} สำเร็จ",
+            category="success",
+        )
     else:
         flash(payload, category="error")
         if "privileged mode" in payload.lower() and not creds.get("secret"):

@@ -1,4 +1,5 @@
 import re
+import ipaddress
 from datetime import datetime, UTC
 
 from netmiko import ConnectHandler
@@ -112,6 +113,82 @@ def delete_loopback(creds, loopback_id, secret=None):
 
     payload = {
         "interface": interface,
+        "updated_at": datetime.now(UTC),
+    }
+    return True, payload
+
+
+def normalize_network(destination, netmask=None):
+    if "/" in destination:
+        network = ipaddress.IPv4Network(destination, strict=False)
+    else:
+        if not netmask:
+            raise ValueError("โปรดระบุ Netmask หรือใช้รูปแบบ CIDR เช่น 10.0.0.0/24")
+        if netmask.startswith("/"):
+            prefix = int(netmask.lstrip("/"))
+            network = ipaddress.IPv4Network(f"{destination}/{prefix}", strict=False)
+        else:
+            network = ipaddress.IPv4Network((destination, netmask), strict=False)
+    return (
+        str(network.network_address),
+        str(network.netmask),
+        network.prefixlen,
+    )
+
+
+def create_static_route(creds, destination, netmask, next_hop, secret=None):
+    network_addr, mask, prefix = normalize_network(destination, netmask)
+    ipaddress.IPv4Address(next_hop)
+    device = _build_device(creds, override_secret=secret)
+    command = f"ip route {network_addr} {mask} {next_hop}"
+    try:
+        with ConnectHandler(**device) as conn:
+            try:
+                conn.enable()
+            except Exception as exc:
+                return False, f"เข้าสู่ privileged mode ไม่ได้: {exc}"
+            conn.send_config_set([command])
+    except NetmikoTimeoutException as exc:
+        return False, f"เชื่อมต่อ {device['host']} ไม่สำเร็จ: {exc}"
+    except NetmikoAuthenticationException as exc:
+        return False, f"เข้าสู่ระบบ {device['host']} ไม่สำเร็จ: {exc}"
+    except Exception as exc:
+        return False, f"สร้าง static route ไม่สำเร็จ: {exc}"
+
+    payload = {
+        "router_ip": creds["ip"],
+        "network": network_addr,
+        "netmask": mask,
+        "prefix_length": prefix,
+        "next_hop": next_hop,
+        "admin_state": "present",
+        "updated_at": datetime.now(UTC),
+    }
+    return True, payload
+
+
+def delete_static_route(creds, network, netmask, next_hop, secret=None):
+    ipaddress.IPv4Address(next_hop)
+    device = _build_device(creds, override_secret=secret)
+    command = f"no ip route {network} {netmask} {next_hop}"
+    try:
+        with ConnectHandler(**device) as conn:
+            try:
+                conn.enable()
+            except Exception as exc:
+                return False, f"เข้าสู่ privileged mode ไม่ได้: {exc}"
+            conn.send_config_set([command])
+    except NetmikoTimeoutException as exc:
+        return False, f"เชื่อมต่อ {device['host']} ไม่สำเร็จ: {exc}"
+    except NetmikoAuthenticationException as exc:
+        return False, f"เข้าสู่ระบบ {device['host']} ไม่สำเร็จ: {exc}"
+    except Exception as exc:
+        return False, f"ลบ static route ไม่สำเร็จ: {exc}"
+
+    payload = {
+        "network": network,
+        "netmask": netmask,
+        "next_hop": next_hop,
         "updated_at": datetime.now(UTC),
     }
     return True, payload

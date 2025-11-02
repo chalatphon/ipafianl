@@ -68,7 +68,7 @@
                     <td>{{ router.username }}</td>
                     <td>
                         <form action="{{ url_for('delete_router', id=router._id) }}" method="POST" class="inline-form">
-                            <button type="submit" class="btn-link">ลบ</button>
+                            <button type="submit" class="btn-chip danger">Delete</button>
                         </form>
                     </td>
                 </tr>
@@ -101,7 +101,7 @@
                     <td>{{ switch.username }}</td>
                     <td>
                         <form action="{{ url_for('delete_switch', id=switch._id) }}" method="POST" class="inline-form">
-                            <button type="submit" class="btn-link">ลบ</button>
+                            <button type="submit" class="btn-chip danger">Delete</button>
                         </form>
                     </td>
                 </tr>

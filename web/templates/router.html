@@ -103,6 +103,60 @@
             </div>
 
             <div class="card-block">
+                <h2>Static Routes</h2>
+                <form method="POST" action="{{ url_for('create_static_route_route', ip=router_ip) }}" class="loopback-form">
+                    <label>
+                        <span>Destination</span>
+                        <input name="route_destination" placeholder="10.0.0.0/24" required />
+                    </label>
+                    <label>
+                        <span>Netmask (ถ้าไม่ได้ใช้ /)</span>
+                        <input name="route_netmask" placeholder="255.255.255.0" />
+                    </label>
+                    <label>
+                        <span>Next Hop</span>
+                        <input name="route_next_hop" placeholder="192.168.1.1" required />
+                    </label>
+                    <label>
+                        <span>Enable Secret (override)</span>
+                        <input name="route_secret" type="password" placeholder="ใส่หากต่างจากข้อมูลเดิม" />
+                    </label>
+                    <button type="submit" class="btn-primary">เพิ่ม Static Route</button>
+                </form>
+
+                {% if static_routes %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Network</th>
+                            <th>Prefix</th>
+                            <th>Netmask</th>
+                            <th>Next Hop</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for route in static_routes %}
+                        <tr>
+                            <td>{{ route.network }}</td>
+                            <td>/{{ route.prefix_length }}</td>
+                            <td>{{ route.netmask }}</td>
+                            <td>{{ route.next_hop }}</td>
+                            <td>
+                                <form action="{{ url_for('delete_static_route_route', ip=router_ip, route_id=route._id) }}" method="POST" class="inline-form loopback-actions">
+                                    <button type="submit" class="btn-chip danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">ยังไม่มี Static Route ที่เพิ่มผ่านระบบ</p>
+                {% endif %}
+            </div>
+
+            <div class="card-block">
                 <h2>Route Table</h2>
                 {% if routing %}
                     <p class="hint">อัปเดตล่าสุด: {{ routing[0].timestamp }}</p>
