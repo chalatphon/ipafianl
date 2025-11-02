@@ -83,9 +83,7 @@ def delete_switch(id):
 
 @app.route("/router/<string:ip>")
 def router_detail(ip):
-    docs = list(
-        mydb.route_table.find({"router_ip": ip}).sort("timestamp", -1).limit(1)
-    )
+    docs = list(mydb.route_table.find({"router_ip": ip}).sort("timestamp", -1).limit(1))
     docsi = list(
         mydb.interface_status.find({"router_ip": ip}).sort("timestamp", -1).limit(1)
     )
@@ -111,9 +109,7 @@ def router_detail(ip):
 @app.route("/switch/<string:ip>")
 def switch_detail(ip):
     status = list(
-        mydb.switch_status.find({"switch_ip": ip})
-        .sort("timestamp", -1)
-        .limit(1)
+        mydb.switch_status.find({"switch_ip": ip}).sort("timestamp", -1).limit(1)
     )
     vlans = list(switch_vlans.find({"switch_ip": ip}))
     vlan_status_map = {entry["interface"]: entry for entry in vlans}

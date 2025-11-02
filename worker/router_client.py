@@ -9,9 +9,7 @@ LEGACY_KEX = (
     "diffie-hellman-group14-sha1",
     "diffie-hellman-group-exchange-sha1",
 )
-Transport._preferred_kex = tuple(
-    dict.fromkeys(LEGACY_KEX + Transport._preferred_kex)
-)
+Transport._preferred_kex = tuple(dict.fromkeys(LEGACY_KEX + Transport._preferred_kex))
 LEGACY_KEYS = ("ssh-rsa",)
 for attr in ("_preferred_keys", "_preferred_pubkeys"):
     current = getattr(Transport, attr, None)
@@ -41,7 +39,9 @@ def get_interfaces(ip, username, password):
         try:
             conn.enable()
         except Exception as exc:
-            print(f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable.")
+            print(
+                f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable."
+            )
         result = conn.send_command("show ip int br", use_textfsm=True)
         conn.disconnect()
 
@@ -65,7 +65,9 @@ def get_route_table(ip, username, password):
         try:
             conn.enable()
         except Exception as exc:
-            print(f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable.")
+            print(
+                f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable."
+            )
         result = conn.send_command("show ip route", use_textfsm=True)
         conn.disconnect()
 
@@ -90,7 +92,9 @@ def get_switch_ports(ip, username, password):
         try:
             conn.enable()
         except Exception as exc:
-            print(f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable.")
+            print(
+                f"Failed to enter enable mode on {ip}: {exc}. Continuing without enable."
+            )
         result = conn.send_command("show interfaces status", use_textfsm=True)
         conn.disconnect()
 

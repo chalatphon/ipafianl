@@ -17,9 +17,7 @@ LEGACY_KEX = (
     "diffie-hellman-group14-sha1",
     "diffie-hellman-group-exchange-sha1",
 )
-Transport._preferred_kex = tuple(
-    dict.fromkeys(LEGACY_KEX + Transport._preferred_kex)
-)
+Transport._preferred_kex = tuple(dict.fromkeys(LEGACY_KEX + Transport._preferred_kex))
 LEGACY_KEYS = ("ssh-rsa",)
 for attr in ("_preferred_keys", "_preferred_pubkeys"):
     current = getattr(Transport, attr, None)

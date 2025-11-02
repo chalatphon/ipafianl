@@ -84,7 +84,10 @@ def set_vlan_state(creds, vlan_id, enabled=True, secret=None):
                 conn.enable()
             except Exception as exc:
                 state = "เปิด" if enabled else "ปิด"
-                return False, f"เข้าสู่ privileged mode ไม่สำเร็จ จึง{state} {interface} ไม่ได้: {exc}"
+                return (
+                    False,
+                    f"เข้าสู่ privileged mode ไม่สำเร็จ จึง{state} {interface} ไม่ได้: {exc}",
+                )
             conn.send_config_set([f"interface {interface}", command])
     except NetmikoTimeoutException as exc:
         return False, f"เชื่อมต่อ {device['host']} ไม่สำเร็จ: {exc}"
@@ -113,7 +116,10 @@ def delete_vlan(creds, vlan_id, secret=None):
             try:
                 conn.enable()
             except Exception as exc:
-                return False, f"เข้าสู่ privileged mode ไม่สำเร็จ จึงลบ {interface} ไม่ได้: {exc}"
+                return (
+                    False,
+                    f"เข้าสู่ privileged mode ไม่สำเร็จ จึงลบ {interface} ไม่ได้: {exc}",
+                )
             conn.send_config_set(commands)
     except NetmikoTimeoutException as exc:
         return False, f"เชื่อมต่อ {device['host']} ไม่สำเร็จ: {exc}"

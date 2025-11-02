@@ -71,7 +71,10 @@ def set_loopback_state(creds, loopback_id, enabled=True, secret=None):
                 conn.enable()
             except Exception as exc:
                 state = "เปิด" if enabled else "ปิด"
-                return False, f"เข้าสู่ privileged mode ไม่สำเร็จ จึง{state} {interface} ไม่ได้: {exc}"
+                return (
+                    False,
+                    f"เข้าสู่ privileged mode ไม่สำเร็จ จึง{state} {interface} ไม่ได้: {exc}",
+                )
             conn.send_config_set([f"interface {interface}", command])
     except NetmikoTimeoutException as exc:
         return False, f"เชื่อมต่อ {device['host']} ไม่สำเร็จ: {exc}"
