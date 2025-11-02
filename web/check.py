@@ -1,6 +1,8 @@
+import os
+
 from netmiko import ConnectHandler
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException
-import os
+from paramiko.transport import Transport
 from pymongo import MongoClient
 
 
@@ -11,6 +13,22 @@ mydb = client[db_name]
 mycol = mydb["mycollection"]
 mysw = mydb["switch"]
 
+LEGACY_KEX = (
+    "diffie-hellman-group14-sha1",
+    "diffie-hellman-group-exchange-sha1",
+)
+Transport._preferred_kex = tuple(
+    dict.fromkeys(LEGACY_KEX + Transport._preferred_kex)
+)
+LEGACY_KEYS = ("ssh-rsa",)
+for attr in ("_preferred_keys", "_preferred_pubkeys"):
+    current = getattr(Transport, attr, None)
+    if current:
+        setattr(
+            Transport,
+            attr,
+            tuple(dict.fromkeys(LEGACY_KEYS + current)),
+        )
 
 def get_device_info(device):
     """
@@ -27,7 +45,9 @@ def get_device_info(device):
             # 1. ตรวจสอบ Routing Table (ความสามารถ Layer 3)
             try:
                 # ส่งคำสั่งและตรวจสอบว่าผลลัพธ์ไม่มี error
-                output = net_connect.send_command("show ip route", expect_string=r"#")
+                output = net_connect.send_command(
+                    "show ip route", expect_string=r"[>#]"
+                )
                 # ตรวจสอบว่าผลลัพธ์ที่ได้ไม่ใช่ข้อความ error มาตรฐาน
                 if (
                     output
@@ -45,7 +65,7 @@ def get_device_info(device):
             try:
                 # ส่งคำสั่งและตรวจสอบว่าผลลัพธ์ไม่มี error
                 output = net_connect.send_command(
-                    "show mac address-table", expect_string=r"#"
+                    "show mac address-table", expect_string=r"[>#]"
                 )
                 if (
                     output
@@ -73,39 +93,69 @@ def get_device_info(device):
             if "Switch" in device_type:
                 print("  Device is a Switch. Saving credentials to MongoDB...")
 
-                # --- CORRECTION 3: แก้ไข Key ของ Dictionary ให้ตรงกับ Netmiko ---
                 switch_data = {
                     "ip": device["host"],
                     "username": device["username"],
                     "password": device["password"],
                 }
-                mysw.insert_one(switch_data)
+                if device.get("secret"):
+                    switch_data["secret"] = device["secret"]
+                existing = mysw.find_one({"ip": device["host"]})
+                if existing:
+                    mysw.update_one(
+                        {"_id": existing["_id"]},
+                        {"$set": switch_data},
+                    )
+                    action = "update"
+                else:
+                    mysw.insert_one(switch_data)
+                    action = "create"
                 print(f"  Successfully saved {device['host']} to the database.")
             elif "Router" in device_type:
                 print("  Device is a Router. Saving credentials to MongoDB...")
 
-                # --- CORRECTION 3: แก้ไข Key ของ Dictionary ให้ตรงกับ Netmiko ---
-                Router_data = {
+                router_data = {
                     "ip": device["host"],
                     "username": device["username"],
                     "password": device["password"],
                 }
-                mycol.insert_one(Router_data)
+                if device.get("secret"):
+                    router_data["secret"] = device["secret"]
+                existing = mycol.find_one({"ip": device["host"]})
+                if existing:
+                    mycol.update_one(
+                        {"_id": existing["_id"]},
+                        {"$set": router_data},
+                    )
+                    action = "update"
+                else:
+                    mycol.insert_one(router_data)
+                    action = "create"
                 print(f"  Successfully saved {device['host']} to the database.")
-            return device_type
+            else:
+                msg = (
+                    f"ไม่สามารถระบุประเภทอุปกรณ์ของ {device['host']} ได้ "
+                    "อาจไม่รองรับคำสั่งที่ใช้ตรวจสอบ"
+                )
+                print(msg)
+                return False, msg
+
+            verb = "อัปเดต" if action == "update" else "เพิ่ม"
+            message = f"{verb} {device_type} {device['host']} เรียบร้อย"
+            return True, message
 
     except NetmikoTimeoutException:
         error_msg = f"Error: Connection to {device['host']} timed out."
         print(error_msg)
-        return error_msg
+        return False, error_msg
     except NetmikoAuthenticationException:
         error_msg = f"Error: Authentication failed for {device['host']}."
         print(error_msg)
-        return error_msg
+        return False, error_msg
     except Exception as e:
         error_msg = f"An unexpected error occurred with {device['host']}: {e}"
         print(error_msg)
-        return error_msg
+        return False, error_msg
 
 
 if __name__ == "__main__":
@@ -121,4 +171,4 @@ if __name__ == "__main__":
     devices_to_check = [cisco_router]  # , cisco_switch]
 
     for dev in devices_to_check:
-        get_device_info(dev)
+        print(get_device_info(dev))
