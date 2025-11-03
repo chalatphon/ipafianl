@@ -2,8 +2,7 @@ mirror_app_repo_to_github:
   stage: deploy
   needs:
     - build_images # เริ่มทำงานเมื่อ build ผ่าน
-  tags:
-    - deployer     # ⭐️ บังคับใช้ 'shell' runner
+
   
   # (Shell executor จะใช้ 'git' ที่คุณติดตั้งไว้บนเซิร์ฟเวอร์ในขั้นตอนที่ 2)
   

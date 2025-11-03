@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ipa2025-msapp-web
+  namespace: ipa2025
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ipa2025-msapp-web
+  template:
+    metadata:
+      labels:
+        app: ipa2025-msapp-web
+    spec:
+      containers:
+        - name: ipa2025-msapp-web
+          image: chalatphon041/web:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: "mysecret"

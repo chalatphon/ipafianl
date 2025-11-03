@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ipa2025-final
+  namespace: devops-tools
+spec:
+  project: ipa2025
+  source:
+    repoURL: 'https://github.com/chalatphon/ipafianl'
+    targetRevision: HEAD
+    path: web/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ipa2025
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
