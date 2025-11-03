@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: ipa2025-ipa2025-web-service
+  name: ipa2025-msapp-web-service
   namespace: ipa2025
 spec:
   selector:
-    app: ipa2025-ipa2025-web
+    app: ipa2025-msapp-web
   ports:
     - port: 80
       targetPort: 8080

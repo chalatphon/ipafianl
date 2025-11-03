@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ipa2025-ipa2025-web-ingress
+  name: ipa2025-msapp-web-ingress
   namespace: ipa2025
 spec:
   ingressClassName: nginx
@@ -12,6 +12,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: ipa2025-final-web-service
+                name: ipa2025-msapp-web-service
                 port:
                   number: 80
