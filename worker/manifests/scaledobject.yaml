@@ -27,7 +27,7 @@ metadata:
 type: Opaque
 stringData:
   # Use the correct AMQP port (5672 is the default, replace if yours is different)
-  RABBITMQ_URI: amqp://admin:rabbitmq@10.0.15.200:5672/
+  RABBITMQ_URI: amqp://admin:rabbitmq@192.168.200.147:5672/
 ---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
