@@ -15,7 +15,7 @@
             <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
             <a href="{{ url_for('switch_detail', ip=switch_ip) }}" class="btn-secondary">Refresh</a>
             <form action="{{ url_for('toggle_theme') }}" method="POST">
-                <button type="submit" class="btn-secondary">{{ 'โหมดสว่าง' if theme == 'dark' else 'โหมดมืด' }}</button>
+                <button type="submit" class="btn-secondary">{{ 'Light Mode' if theme == 'dark' else 'Dark Mode' }}</button>
             </form>
         </div>
     </header>
@@ -53,7 +53,7 @@
                 <span>Enable Secret (override)</span>
                 <input name="vlan_secret" type="password" placeholder="ใส่หากต่างจากข้อมูลเดิม" />
             </label>
-            <button type="submit" class="btn-primary">สร้าง VLAN</button>
+            <button type="submit" class="btn-primary">Create VLAN</button>
         </form>
 
         {% if vlans %}

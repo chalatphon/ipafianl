@@ -15,7 +15,7 @@
             <a href="/" class="btn-secondary">← กลับหน้าหลัก</a>
             <a href="{{ url_for('router_detail', ip=router_ip) }}" class="btn-secondary">Refresh</a>
             <form action="{{ url_for('toggle_theme') }}" method="POST">
-                <button type="submit" class="btn-secondary">{{ 'โหมดสว่าง' if theme == 'dark' else 'โหมดมืด' }}</button>
+                <button type="submit" class="btn-secondary">{{ 'Light Mode' if theme == 'dark' else 'Dark Mode' }}</button>
             </form>
         </div>
     </header>
@@ -51,7 +51,7 @@
                         <span>Enable Secret (override)</span>
                         <input name="loopback_secret" type="password" placeholder="ใส่ถ้าไม่ตรงกับข้อมูลเดิม" />
                     </label>
-                    <button type="submit" class="btn-primary">สร้าง Loopback</button>
+                    <button type="submit" class="btn-primary">Create Loopback</button>
                 </form>
 
                 {% if loopbacks %}
@@ -124,7 +124,7 @@
                         <span>Enable Secret (override)</span>
                         <input name="route_secret" type="password" placeholder="ใส่หากต่างจากข้อมูลเดิม" />
                     </label>
-                    <button type="submit" class="btn-primary">เพิ่ม Static Route</button>
+                    <button type="submit" class="btn-primary">Add Static Route</button>
                 </form>
 
                 {% if static_routes %}

@@ -13,7 +13,7 @@
         </div>
         <div class="header-actions">
             <form action="{{ url_for('toggle_theme') }}" method="POST">
-                <button type="submit" class="btn-secondary">{{ 'โหมดสว่าง' if theme == 'dark' else 'โหมดมืด' }}</button>
+                <button type="submit" class="btn-secondary">{{ 'Light Mode' if theme == 'dark' else 'Dark Mode' }}</button>
             </form>
         </div>
     </header>
@@ -47,7 +47,7 @@
                 <span>Enable Secret (optional)</span>
                 <input name="secret" type="password" placeholder="ถ้าแตกต่างจาก password" />
             </label>
-            <button type="submit" class="btn-primary">บันทึก</button>
+            <button type="submit" class="btn-primary">Save</button>
         </form>
         <p class="hint">ระบบจะตรวจสอบคำสั่ง `show ip route` และ `show mac address-table` เพื่อแยกประเภทอุปกรณ์ให้เอง</p>
     </section>
