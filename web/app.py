@@ -51,7 +51,9 @@ def main():
     routers = list(mycol.find())
     switches = list(mysw.find())
     theme = session.get("theme", "light")
-    return render_template("index.html", routers=routers, switches=switches, theme=theme)
+    return render_template(
+        "index.html", routers=routers, switches=switches, theme=theme
+    )
 
 
 @app.route("/add", methods=["POST"])
