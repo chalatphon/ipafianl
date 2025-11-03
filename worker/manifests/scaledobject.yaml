@@ -1,0 +1,42 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ipa2025-msapp-worker-scaler
+  namespace: ipa2025
+spec:
+  scaleTargetRef:
+    name: ipa2025-msapp-worker
+  pollingInterval: 15   # Check queue every 15 seconds
+  cooldownPeriod: 120   # Wait 120s before scaling down
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  triggers:
+    - type: rabbitmq
+      metadata:
+        queueName: router_jobs
+        mode: QueueLength
+        value: "10"
+      authenticationRef:
+        name: rabbitmq-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-secret
+  namespace: ipa2025
+type: Opaque
+stringData:
+  # Use the correct AMQP port (5672 is the default, replace if yours is different)
+  RABBITMQ_URI: amqp://admin:rabbitmq@10.0.15.200:5672/
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: rabbitmq-auth
+  namespace: ipa2025
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: rabbitmq-secret
+      key: RABBITMQ_URI
+---

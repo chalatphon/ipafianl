@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ipa2025-msapp-worker
+  namespace: devops-tools
+spec:
+  project: ipa2025
+  source:
+    repoURL: 'https://github.com/chalatphon/ipa2025-msapp'
+    targetRevision: HEAD
+    path: worker/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ipa2025
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
