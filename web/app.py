@@ -6,6 +6,7 @@ from flask import render_template
 from flask import redirect
 from flask import url_for
 from flask import flash
+from flask import session
 from pymongo import MongoClient
 from bson import ObjectId
 from check import get_device_info
@@ -37,11 +38,20 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET", "change-me")
 
 
+@app.route("/theme", methods=["POST"])
+def toggle_theme():
+    current = session.get("theme", "light")
+    session["theme"] = "dark" if current == "light" else "light"
+    next_url = request.referrer or url_for("main")
+    return redirect(next_url)
+
+
 @app.route("/")
 def main():
     routers = list(mycol.find())
     switches = list(mysw.find())
-    return render_template("index.html", routers=routers, switches=switches)
+    theme = session.get("theme", "light")
+    return render_template("index.html", routers=routers, switches=switches, theme=theme)
 
 
 @app.route("/add", methods=["POST"])
@@ -104,6 +114,7 @@ def router_detail(ip):
             if name and name.lower().startswith("loopback"):
                 status_map[name] = intf
 
+    theme = session.get("theme", "light")
     return render_template(
         "router.html",
         router_ip=ip,
@@ -112,6 +123,7 @@ def router_detail(ip):
         loopbacks=loopback_records,
         loopback_status=status_map,
         static_routes=static_routes,
+        theme=theme,
     )
 
 
@@ -122,12 +134,14 @@ def switch_detail(ip):
     )
     vlans = list(switch_vlans.find({"switch_ip": ip}))
     vlan_status_map = {entry["interface"]: entry for entry in vlans}
+    theme = session.get("theme", "light")
     return render_template(
         "switch.html",
         switch_ip=ip,
         switch_status=status,
         vlans=vlans,
         vlan_status=vlan_status_map,
+        theme=theme,
     )
 
 
