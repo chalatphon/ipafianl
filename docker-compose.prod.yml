@@ -1,9 +1,31 @@
 services:
   web:
     image: ${DOCKERHUB_USERNAME}/web:latest
+    environment:
+      # ดึงค่ามาจาก .env ที่ CI/CD สร้างไว้
+      MONGO_URI: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/"
+      DB_NAME: "mydatabase"
+    networks:
+      - app-net
 
   scheduler:
     image: ${DOCKERHUB_USERNAME}/scheduler:latest
+    environment:
+      # ดึงค่ามาจาก .env ที่ CI/CD สร้างไว้
+      MONGO_URI: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/"
+      DB_NAME: "mydatabase"
+      # กำหนด Hostname ของ RabbitMQ ภายใน Docker network
+      RABBITMQ_HOST: "rabbitmq"
+    networks:
+      - app-net
 
   worker:
     image: ${DOCKERHUB_USERNAME}/worker:latest
+    environment:
+      # ดึงค่ามาจาก .env ที่ CI/CD สร้างไว้
+      MONGO_URI: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/"
+      DB_NAME: "mydatabase"
+      # กำหนด Hostname ของ RabbitMQ ภายใน Docker network
+      RABBITMQ_HOST: "rabbitmq"
+    networks:
+      - app-net
