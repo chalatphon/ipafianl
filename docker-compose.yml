@@ -46,6 +46,7 @@ services:
     environment:
       MONGO_URI: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/"
       DB_NAME: "mydatabase"
+      RABBITMQ_HOST: "rabbitmq"
 
   worker:
     build: ./worker
@@ -60,7 +61,7 @@ services:
     environment:
       MONGO_URI: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/"
       DB_NAME: "mydatabase"
-
+      RABBITMQ_HOST: "rabbitmq"
 # 'volumes' ต้องอยู่ที่ระดับบนสุด
 volumes:
   mongo-data:
