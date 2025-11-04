@@ -10,7 +10,7 @@ def scheduler():
     INTERVAL = 10.0
     next_run = time.monotonic()
     count = 0
-
+    host = os.getenv("RABBITMQ_HOST")
     while True:
         now = time.time()
         now_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
@@ -21,10 +21,10 @@ def scheduler():
         try:
             for data in get_router_info():
                 body_bytes = json_util.dumps(data).encode("utf-8")
-                produce_router("rabbitmq", body_bytes)
+                produce_router(host, body_bytes)
             for datas in get_switch_info():
                 body_bytes = json_util.dumps(datas).encode("utf-8")
-                produce_switch("rabbitmq", body_bytes)
+                produce_switch(host, body_bytes)
         except Exception as e:
             print(e)
             time.sleep(3)
