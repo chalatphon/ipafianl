@@ -1,5 +1,5 @@
 import time
-
+import os
 from bson import json_util
 from producer import produce_router, produce_switch
 from database import get_router_info, get_switch_info
